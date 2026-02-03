@@ -1,0 +1,21 @@
+# Context management ephemeral data
+.context/tool-outputs/*
+.context/terminal/*
+
+# Keep directory structure
+!.context/tool-outputs/.gitkeep
+!.context/terminal/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Optional: Uncomment to exclude history from version control
+# .context/history/
