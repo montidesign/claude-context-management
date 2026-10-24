@@ -1,112 +1,73 @@
-# Claude Context Management Template
+# Context Handoff (`ctx`) for Claude Code
 
-A project template with dynamic context discovery for Claude Code, adapted from [Cursor's context engineering research](https://cursor.com/blog/dynamic-context-discovery).
+Keep Claude Code sessions short without losing project history.
 
-## What This Does
+Every message re-sends the whole conversation, so a session kept open as "project memory" makes each
+message more expensive than the last. This plugin makes the cheap path easy: finish a stretch of work,
+run `/ctx:handoff`, run `/clear`, and keep going in a fresh session that already knows where things stand.
 
-Reduces context window bloat and preserves important information by:
+## How it works
 
-1. **Saving long outputs to files** instead of keeping them in context
-2. **Documenting session history** so context survives summarization
-3. **Organizing skills** as discoverable files for specialized tasks
-4. **Managing MCP tools** with on-demand lookup (46.9% token reduction)
-5. **Persisting terminal logs** for efficient retrieval with grep/tail
+| Piece | What it does | Context cost |
+|---|---|---|
+| `/ctx:handoff` skill | Writes the session log, decision records, and current state to `.context/` | Only when run |
+| SessionStart hook | On startup, `/clear`, and compaction, loads `.context/STATE.md` (≤ ~40 lines) | Small, and nothing in projects without one |
+| Status line (optional) | Shows context %, 5-hour and 7-day usage, and nudges you to hand off at 60% | None |
 
-## Quick Start
+What it writes, per project:
 
-### Using This Template
+```
+.context/
+├── STATE.md       # Overwritten each handoff: goal, done, next steps, open questions. Auto-loaded.
+├── history/       # One detailed log per session: narrative, decisions and alternatives, dead ends,
+│                  #   evidence, files changed, and the session ID for `claude --resume <id>`.
+└── decisions.md   # Append-only decision records: context, options, choice, why, consequences.
+```
+
+`history/` and `decisions.md` are never loaded automatically, so they are written in full. Ask Claude
+"why did we choose X?" and it greps them. For the verbatim conversation, reopen the session with
+`claude --resume <session-id>` from the history entry.
+
+What it leaves to Claude Code itself:
+
+- **Lessons and preferences**: auto memory (`~/.claude/projects/<project>/memory/`) records corrections and preferences on its own.
+- **Large tool output**: Claude Code saves oversized results to a file and keeps only a preview in context.
+- **MCP tool descriptions**: tool search loads tool schemas only when needed.
+
+## Install
 
 ```bash
-# Create a new project from this template
-gh repo create my-project --template YOUR_USERNAME/claude-context-management --private --clone
-cd my-project
-
-# Or clone directly
-git clone https://github.com/YOUR_USERNAME/claude-context-management.git my-project
-cd my-project
-rm -rf .git && git init
+claude plugin marketplace add montidesign/claude-context-management   # or a local clone's path
+claude plugin install ctx@montidesign
 ```
 
-### After Creating Your Project
+Optional status line, in `~/.claude/settings.json` (point the path at your clone):
 
-1. Edit `CLAUDE.md` - Update the project name and description at the top
-2. Edit `.context/project/overview.md` - Fill in your tech stack and structure
-3. Start working - The context management rules in `CLAUDE.md` guide Claude Code
-
-## Directory Structure
-
-```
-├── CLAUDE.md                    # Main Claude Code instructions
-├── .context/
-│   ├── tool-outputs/            # Saved long command outputs
-│   ├── history/                 # Session logs and decisions
-│   ├── mcp/                     # MCP tool descriptions
-│   ├── skills/                  # Reusable task instructions
-│   │   ├── scripts/             # Helper scripts
-│   │   └── INDEX.md             # Skill directory
-│   ├── terminal/                # Terminal session logs
-│   └── project/                 # Project context
-│       ├── overview.md          # Tech stack, commands
-│       ├── patterns.md          # Code conventions
-│       └── decisions.md         # Architecture decisions
-└── .claude/
-    └── skills/                  # Claude Code skills
-        └── context-management/  # This system as a skill
+```json
+"statusLine": {
+  "type": "command",
+  "command": "node \"D:/development/github/claude-context-management/scripts/statusline.mjs\""
+}
 ```
 
-## Helper Scripts
+Requires Node.js on PATH.
 
-```bash
-# Save long command output
-.context/skills/scripts/save-output.sh "npm install" "npm-install"
+## Habits that save the most tokens
 
-# Start a new session log
-.context/skills/scripts/new-session.sh "Feature: User Auth"
+- One task per session: `/ctx:handoff` then `/clear` between tasks, instead of `/compact`.
+- Press Esc twice to rewind a failed attempt instead of correcting it in place.
+- Ask Claude to use subagents for broad searches and research; only their conclusions enter your context.
+- `/context` shows what is filling the window.
+- Raw transcripts are kept for `cleanupPeriodDays` (30 by default). Raise it in settings if you want
+  `claude --resume` to reach further back.
 
-# Clean up old files (default: 7 days)
-.context/skills/scripts/cleanup.sh 7
-```
+## Should `.context/` be committed?
 
-## Key Commands
+Commit `history/` and `decisions.md` if the team should share the record. `STATE.md` is personal
+working state; add `.context/STATE.md` to `.gitignore` if several people work on the repo.
 
-```bash
-# Recent session history
-cat .context/history/$(ls -t .context/history/*.md 2>/dev/null | head -1)
+## History
 
-# Search saved outputs
-grep -rn "error" .context/tool-outputs/
-
-# Find skills
-grep -l "database" .context/skills/*.md
-
-# Check terminal logs
-tail -100 .context/terminal/*.log
-```
-
-## Customization
-
-### Adding Project-Specific Skills
-
-Create `.context/skills/your-skill.md`:
-
-```markdown
-# Skill: [Name]
-
-## Description
-[What this skill does]
-
-## When to Use
-- [Trigger conditions]
-- Keywords: [searchable terms]
-
-## Instructions
-[Step-by-step guide]
-```
-
-### Documenting MCP Tools
-
-Create `.context/mcp/[server-name]/_INDEX.md` listing available tools, then individual files for each tool's parameters and usage.
-
-## Credits
-
-Based on [Cursor's Dynamic Context Discovery](https://cursor.com/blog/dynamic-context-discovery) research (January 2026).
+v1 was a project template (a CLAUDE.md rule block plus `.context/` folders and shell scripts), adapted
+from [Cursor's dynamic context discovery](https://cursor.com/blog/dynamic-context-discovery) research.
+v2 drops the parts Claude Code now does natively and packages the rest as a plugin.

@@ -1,0 +1,13 @@
+{
+  "name": "ctx",
+  "displayName": "Context Handoff",
+  "version": "2.0.0",
+  "description": "Short sessions without losing project history: /ctx:handoff saves state, session logs, and decisions to .context/, and a SessionStart hook reloads the state after /clear",
+  "author": {
+    "name": "montidesign",
+    "email": "montidesignusa@gmail.com"
+  },
+  "repository": "https://github.com/montidesign/claude-context-management",
+  "license": "MIT",
+  "keywords": ["context", "handoff", "session-history", "decisions", "tokens"]
+}

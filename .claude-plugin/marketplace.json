@@ -1,0 +1,14 @@
+{
+  "name": "montidesign",
+  "description": "Monti Design Claude Code plugins",
+  "owner": {
+    "name": "montidesign"
+  },
+  "plugins": [
+    {
+      "name": "ctx",
+      "source": "./",
+      "description": "Session handoff and durable project history for Claude Code"
+    }
+  ]
+}
